@@ -3,15 +3,18 @@ const path = require("path");
 const http = require("http");
 const socketIO = require("socket.io");
 const cors = require("cors");
+const morgan = require("morgan");
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server, {
+const io = new socketIO.Server(server, {
   maxHttpBufferSize: 1000000000000000
 });
 
 // Middleware
 app.use(express.static(path.join(__dirname, "/public")));
+
+app.use(morgan("dev"));
 
 // Enable CORS for specific origin
 const allowedOrigin = "http://192.168.1.47";
