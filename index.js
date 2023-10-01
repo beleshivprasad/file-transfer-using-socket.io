@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, "/public")));
 app.use(morgan("dev"));
 
 // Enable CORS for specific origin
-const allowedOrigin = "http://192.168.1.47";
+const allowedOrigin = "*";
 app.use(cors({origin: allowedOrigin}));
 
 // Handle preflight requests for the /socket route
@@ -35,7 +35,7 @@ io.on("connection", socket => {
 
   socket.on("receiver-join", data => {
     socket.join(data.uid);
-    socket.in(data.sender_uid).emit("init", data.uid);
+    socket.in(data.senderId).emit("init", data);
   });
 
   socket.on("file-meta", data => {

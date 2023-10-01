@@ -13,11 +13,13 @@
       return;
     }
 
+    document.querySelector("#room-id").innerText = `Room ID: ${senderId}`;
+
     let joinId = generateId();
 
     socket.emit("receiver-join", {
       uid: joinId,
-      sender_uid: senderId
+      senderId
     });
 
     document.querySelector(".join-screen").classList.remove("active");
