@@ -9,18 +9,18 @@
   let senderId = generateId();
   document.querySelector("#join-id").innerHTML = `
     <b>Room ID</b>
-    <span>${senderId}</span>
+    <span class="sender-room-id">${senderId}</span>
   `;
 
   document.querySelector("#room-id").innerText = `Room ID: ${senderId}`;
 
   socket.emit("sender-join", {
-    uid: senderId
+    uid: senderId,
   });
 
   console.log(`Sender ID: ${senderId} Joined ${senderId}`);
 
-  socket.on("init", ({uid, senderId}) => {
+  socket.on("init", ({ uid, senderId }) => {
     console.log(`Receiver ID: ${uid} Joined Sender ID: ${senderId}`);
     receiverId = uid;
     document.querySelector(".join-screen").classList.remove("active");
@@ -28,17 +28,17 @@
   });
 
   const dragWrapper = document.querySelector("#drop-area");
-  dragWrapper.addEventListener("dragenter", evt => {
+  dragWrapper.addEventListener("dragenter", (evt) => {
     console.log("drag enter", evt);
     dragWrapper.classList.add("drag-enter");
   });
 
-  dragWrapper.addEventListener("dragleave", evt => {
+  dragWrapper.addEventListener("dragleave", (evt) => {
     console.log("drag leave", evt);
     dragWrapper.classList.add("drag-leave");
   });
 
-  document.querySelector("#drop-area").addEventListener("drop", evt => {
+  document.querySelector("#drop-area").addEventListener("drop", (evt) => {
     let files = evt.dataTransfer.files;
     if (!files || files.length === 0) {
       console.error("No Files found");
@@ -48,7 +48,7 @@
     handleFileShare(files);
   });
 
-  document.querySelector("#file-input").addEventListener("change", evt => {
+  document.querySelector("#file-input").addEventListener("change", (evt) => {
     let files = evt.target.files;
     if (!files || files.length === 0) {
       console.error("No Files found");
@@ -60,8 +60,6 @@
 
   function handleFileShare(files) {
     for (let i = 0; i < files.length; i++) {
-      console.warn("File Selection", files[i]);
-
       let el = document.createElement("div");
       el.classList.add("item");
       el.innerHTML = `
@@ -76,53 +74,68 @@
     }
   }
 
-  function shareFile(file, el) {
-    console.log("Share File ", file, el);
+  async function shareFile(file, el) {
+    const offset = 0;
     const chunkSize = 1024 * 1024 * 1; // MB chunks (adjust as needed)
 
-    const reader = new FileReader();
-    const offset = 0;
-
-    reader.onload = function () {
-      console.log("onload ", chunkSize / (1024 * 1024 * 20), " MB");
-      const buffer = new Uint8Array(reader.result);
-
-      console.log("File Buffer", buffer);
-      const metaData = {
-        filename: file.name,
-        totalBufferSize: buffer.length,
-        bufferSize: chunkSize
-      };
-
-      socket.emit("file-meta", {
-        uid: receiverId,
-        metaData
-      });
-
-      function sendNextChunk(offset) {
-        const chunk = buffer.slice(offset, offset + chunkSize);
-        offset += chunk.length;
-
-        if (chunk.length > 0) {
-          socket.emit("file-raw", {
-            uid: receiverId,
-            buffer: chunk
-          });
-
-          const progress = (offset / buffer.length) * 100;
-          el.innerText = `${Math.trunc(Math.min(progress, 100))} %`;
-
-          if (offset < buffer.length) {
-            setTimeout(() => {
-              sendNextChunk(offset);
-            }, 0); // Send the next chunk asynchronously to avoid blocking
-          }
-        }
-      }
-
-      sendNextChunk(offset);
+    const metaData = {
+      filename: file.name,
+      totalBufferSize: file.size,
+      bufferSize: chunkSize,
     };
 
-    reader.readAsArrayBuffer(file);
+    console.log("Sending Meta Data To Server", metaData);
+
+    socket.emit("file-meta", {
+      uid: receiverId,
+      metaData,
+    });
+
+    console.log("File Transfer Started");
+
+    socket.on("send-next-chunk", async (data) => {
+      const { offset, chunkSize } = data;
+      await sendChunk(file, offset, chunkSize, el);
+    });
+
+    await sendChunk(file, offset, chunkSize, el);
+  }
+
+  async function sendChunk(file, offset, chunkSize, el) {
+    console.log(`Send Data From ${offset} - ${Math.min(offset + chunkSize, file.size)}`);
+    const chunk = await readFileChunk(file, offset, Math.min(offset + chunkSize, file.size));
+    socket.emit("file-raw", {
+      uid: receiverId,
+      buffer: chunk,
+      offset: Math.min(offset, file.size),
+      chunkSize,
+      bufferSize: file.size,
+    });
+
+    const progress = ((offset + chunkSize) / file.size) * 100;
+
+    el.innerText = `${Math.min(progress, 100).toFixed(2)} %`;
+  }
+
+  function readFileChunk(file, offset, chunkSize) {
+    const reader = new FileReader();
+
+    return new Promise((resolve, reject) => {
+      if (!file instanceof File) {
+        reject(`Invalid File Type ${file}`);
+      }
+
+      reader.onload = (evt) => {
+        if (evt.target.readyState === FileReader.DONE) {
+          resolve(evt.target.result);
+        }
+      };
+
+      reader.onerror = (evt) => reject(evt.target.error);
+
+      const blob = file.slice(offset, chunkSize);
+
+      reader.readAsArrayBuffer(blob);
+    });
   }
 })();

@@ -19,7 +19,7 @@
 
     socket.emit("receiver-join", {
       uid: joinId,
-      senderId
+      senderId,
     });
 
     document.querySelector(".join-screen").classList.remove("active");
@@ -30,10 +30,10 @@
     metaData: null,
     transmitted: 0,
     buffer: [],
-    progressNode: null
+    progressNode: null,
   };
 
-  socket.on("fs-meta", metaData => {
+  socket.on("fs-meta", (metaData) => {
     console.log("User sharing file", metaData);
     fileShare.metaData = metaData;
     fileShare.transmitted = 0;
@@ -53,16 +53,18 @@
 
     // Start receiving the file
     socket.emit("file-start", {
-      uid: senderId
+      uid: senderId,
     });
   });
 
-  socket.on("fs-share", buffer => {
+  socket.on("fs-share", (data) => {
+    const { buffer, offset, chunkSize, bufferSize } = data;
     fileShare.buffer.push(buffer);
     fileShare.transmitted += buffer.byteLength;
-    fileShare.progressNode.innerText = `${Math.trunc(
-      (fileShare.transmitted / fileShare.metaData.totalBufferSize) * 100
-    )} %`;
+    fileShare.progressNode.innerText = `${(
+      (fileShare.transmitted / fileShare.metaData.totalBufferSize) *
+      100
+    ).toFixed(2)} %`;
 
     if (fileShare.transmitted === fileShare.metaData.totalBufferSize) {
       // All chunks received, download the file
@@ -72,12 +74,19 @@
         metaData: null,
         transmitted: 0,
         buffer: [],
-        progressNode: null
+        progressNode: null,
       };
     } else {
-      // Request the next chunk
-      socket.emit("file-start", {
-        uid: senderId
+      console.log(
+        `Requesting Data From ${offset + chunkSize} - ${Math.min(
+          offset + chunkSize + chunkSize,
+          bufferSize
+        )}`
+      );
+      socket.emit("send-next-chunk", {
+        uid: senderId,
+        offset: offset + chunkSize,
+        chunkSize,
       });
     }
   });
