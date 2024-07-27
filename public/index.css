@@ -156,3 +156,29 @@ body {
   min-width: 6rem;
   text-align: center;
 }
+
+.landing-container {
+  top: 10%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.nav-buttons-container {
+  top: 20%;
+  position: relative;
+  display: flex;
+  gap: 1%;
+  justify-content: center;
+  align-items: center;
+}
+
+.nav-buttons {
+  padding: 7px 15px;
+  border-radius: 20px;
+  text-decoration: none;
+  border: 1px solid black;
+  color: black;
+}

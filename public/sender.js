@@ -76,7 +76,7 @@
 
   async function shareFile(file, el) {
     const offset = 0;
-    const chunkSize = 1024 * 1024 * 1; // MB chunks (adjust as needed)
+    const chunkSize = 1024 * 1024 * 5; // MB chunks (adjust as needed)
 
     const metaData = {
       filename: file.name,

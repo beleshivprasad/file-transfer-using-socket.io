@@ -97,5 +97,7 @@
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();
+
+    fileShare.buffer = [];
   }
 })();
